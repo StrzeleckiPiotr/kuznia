@@ -20,6 +20,7 @@ namespace kuznia
 
         static void Main(string[] args)
         {
+            AzurecognityService azurecognityService = new AzurecognityService();
             
             MLContext mlContext = new MLContext(seed: 0);
             _textLoader = mlContext.Data.TextReader(new TextLoader.Arguments()
@@ -130,7 +131,7 @@ namespace kuznia
             {
                 new SentimentData
                 {
-                    SentimentText = "This is a very rude movie"
+                    SentimentText = "This is a very rude movie, war "
                 },
                 new SentimentData
                 {
