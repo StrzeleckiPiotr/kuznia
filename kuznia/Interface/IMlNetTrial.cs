@@ -6,6 +6,6 @@ namespace kuznia.Interface
 {
     interface IMlNetTrial
     {
-        void Execute(int c);
+        void Execute(string inputData);
     }
 }

@@ -6,100 +6,64 @@ using Microsoft.Rest;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
+using kuznia.Interface;
 
 namespace kuznia
 {
-    public class AzurecognityService
+    public class AzurecognityService : IAzurecognityService
     {
- 
-        public AzurecognityService()
+        public string TextDetect(ITextAnalyticsClient client, string report)
         {
-                // Create a client.
-                ITextAnalyticsClient client = new TextAnalyticsClient(new ApiKeyServiceClientCredentials())
-                {
-                    Endpoint = "https://northeurope.api.cognitive.microsoft.com"
-                }; 
+            var result = client.DetectLanguageAsync(new BatchInput(
+                    new List<Input>()
+                        {
+                          new Input("1", report)
+                    })).Result;
 
-                Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-                // Extracting language
-                Console.WriteLine("===== LANGUAGE EXTRACTION ======");
+            return result.Documents[0].DetectedLanguages[0].Name;
+        }
 
-                var result = client.DetectLanguageAsync(new BatchInput(
-                        new List<Input>()
-                            {
-                          new Input("1", "This is a document written in English."),
-                          new Input("2", "Este es un document escrito en Español."),
-                          new Input("3", "这是一个用中文写的文件")
-                        })).Result;
-
-                // Printing language results.
-                foreach (var document in result.Documents)
-                {
-                    Console.WriteLine("Document ID: {0} , Language: {1}", document.Id, document.DetectedLanguages[0].Name);
-                }
-
-                // Getting key-phrases
-                Console.WriteLine("\n\n===== KEY-PHRASE EXTRACTION ======");
-
-            KeyPhraseBatchResult result2 = client.KeyPhrasesAsync(new MultiLanguageBatchInput(
+        public IList<string> KeyPhrases(ITextAnalyticsClient client, string identity, string text)
+        {
+            KeyPhraseBatchResult result = client.KeyPhrasesAsync(new MultiLanguageBatchInput(
                         new List<MultiLanguageInput>()
                         {
-                          new MultiLanguageInput("ja", "1", "猫は幸せ"),
-                          new MultiLanguageInput("de", "2", "Fahrt nach Stuttgart und dann zum Hotel zu Fu."),
-                          new MultiLanguageInput("en", "3", "My cat is stiff as a rock."),
-                          new MultiLanguageInput("es", "4", "A mi me encanta el fútbol!"),
-                          new MultiLanguageInput("pl", "5", " Polska ma wielkie krain")
+                          new MultiLanguageInput(identity, "1", text)
                             })).Result;
 
-                // Printing keyphrases
-                foreach (var document in result2.Documents)
-                {
-                    Console.WriteLine("Document ID: {0} ", document.Id);
+            return result.Documents[0].KeyPhrases;
+        }
 
-                    Console.WriteLine("\t Key phrases:");
-
-                    foreach (string keyphrase in document.KeyPhrases)
-                    {
-                        Console.WriteLine("\t\t" + keyphrase);
-                    }
-                }
-
-                // Extracting sentiment
-                Console.WriteLine("\n\n===== SENTIMENT ANALYSIS ======");
-
-                SentimentBatchResult result3 = client.SentimentAsync(
+        public double? SentimentText(ITextAnalyticsClient client, string identity, string text)
+        {
+            SentimentBatchResult result = client.SentimentAsync(
                         new MultiLanguageBatchInput(
                             new List<MultiLanguageInput>()
                             {
-                          new MultiLanguageInput("en", "0", "I had the best day of my life."),
-                          new MultiLanguageInput("en", "1", "This was a waste of my time. The speaker put me to sleep."),
-                          new MultiLanguageInput("es", "2", "No tengo dinero ni nada que dar..."),
-                          new MultiLanguageInput("pl", "3", "Wspaniałe"),
+
+                          new MultiLanguageInput(identity, "1",text)
                             })).Result;
 
-
-                // Printing sentiment results
-                foreach (var document in result3.Documents)
-                {
-                    Console.WriteLine("Document ID: {0} , Sentiment Score: {1:0.00}", document.Id, document.Score);
-                }
-
-
-                
-               
-
-                Console.ReadLine();
-            }
-        public class ApiKeyServiceClientCredentials : ServiceClientCredentials
+            return result.Documents[0].Score;
+        }
+        public ITextAnalyticsClient TextAnalyticsClient()
         {
-            public override Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            ITextAnalyticsClient client = new TextAnalyticsClient(new ApiKeyServiceClientCredentials())
             {
-                request.Headers.Add("Ocp-Apim-Subscription-Key", "77a9045302b74077a920d54acb7fd43b");
-                return base.ProcessHttpRequestAsync(request, cancellationToken);
-            }
+                Endpoint = "https://northeurope.api.cognitive.microsoft.com"
+            };
+
+            return client;
         }
     }
+    public class ApiKeyServiceClientCredentials : ServiceClientCredentials
+    {
+        public override Task ProcessHttpRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.Headers.Add("Ocp-Apim-Subscription-Key", "47473c09f5b748788531fd47529e06b4");
+            return base.ProcessHttpRequestAsync(request, cancellationToken);
+        }
     }
+}
 

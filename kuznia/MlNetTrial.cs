@@ -15,10 +15,8 @@ namespace kuznia
 {
      public class MlNetTrial : IMlNetTrial
     {
-        string _trainDataPathpl = Path.Combine(Environment.CurrentDirectory, "Data", "Polskie-Data.tsv");
-        string _testDataPathpl = Path.Combine(Environment.CurrentDirectory, "Data", "Polskie-Test.tsv");
-        string _trainDataPathen = Path.Combine(Environment.CurrentDirectory, "Data", "wikipedia-detox-250-line-data.tsv");
-        string _testDataPathen = Path.Combine(Environment.CurrentDirectory, "Data", "wikipedia-detox-250-line-test.tsv");
+        readonly string _trainDataPathen = Path.Combine(Environment.CurrentDirectory, "Data", "wikipedia-detox-250-line-data.tsv");
+        readonly string _testDataPathen = Path.Combine(Environment.CurrentDirectory, "Data", "wikipedia-detox-250-line-test.tsv");
         static readonly string _modelPath = Path.Combine(Environment.CurrentDirectory, "Data", "Model.zip");
         static TextLoader _textLoader;
         MLContext mlConpext;
@@ -30,29 +28,18 @@ namespace kuznia
         {
            
         }
-        public void Execute(int c)
+        public void Execute(string inputData)
         {
+            Console.WriteLine("\n\n===== SENTIMENT ANALYSIS ======");
             MLContext mlContext = PrepereDataTrainSet();
 
             string _trainDataPath = _trainDataPathen;
             string _testDataPath = _testDataPathen;
-          if ( c ==2)
-            {
-            _trainDataPath = null;
-            _testDataPath = null;
-            _trainDataPath = _trainDataPathpl;
-            _testDataPath = _testDataPathpl;
-            }
-
 
             var model = Train(mlContext, _trainDataPath);
 
             Evaluate(mlContext, model, _testDataPath);
-            Predict(mlContext, model);
-            PredictWithModelLoadedFromFile(mlContext);
-            Console.WriteLine();
-            Console.WriteLine("=============== End of process ===============");
-          
+            Predict(mlContext, model , inputData);
         }
 
 
@@ -110,14 +97,14 @@ namespace kuznia
 
      }
 
-        private static void Predict(MLContext mlContext, ITransformer model)
+        private static void Predict(MLContext mlContext, ITransformer model, string inputData)
         {
 
             var predictionFunction = model.MakePredictionFunction<SentimentData, SentimentPrediction>(mlContext);
 
             SentimentData sampleStatement = new SentimentData
             {
-                SentimentText = "This is a very good movie"
+                SentimentText = inputData
             };
 
             var resultprediction = predictionFunction.Predict(sampleStatement);
@@ -132,60 +119,12 @@ namespace kuznia
 
         }
 
-        public static void PredictWithModelLoadedFromFile(MLContext mlContext)
-        {
-
-            IEnumerable<SentimentData> sentiments = new[]
-            {
-                        new SentimentData
-                        {
-                            SentimentText = "This is a very rude movie, war "
-                        },
-                        new SentimentData
-                        {
-                            SentimentText = "He is the best, and the article should say that."
-                        }
-                    };
-
-            ITransformer loadedModel;
-            using (var stream = new FileStream(_modelPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                loadedModel = mlContext.Model.Load(stream);
-            }
-
-            var sentimentStreamingDataView = mlContext.CreateStreamingDataView(sentiments);
-            var predictions = loadedModel.Transform(sentimentStreamingDataView);
-
-
-            var predictedResults = predictions.AsEnumerable<SentimentPrediction>(mlContext, reuseRowObject: false);
-
-            Console.WriteLine();
-
-            Console.WriteLine("=============== Prediction Test of loaded model with a multiple samples ===============");
-
-
-            Console.WriteLine();
-
-
-            var sentimentsAndPredictions = sentiments.Zip(predictedResults, (sentiment, prediction) => (sentiment, prediction));
-
-            foreach (var item in sentimentsAndPredictions)
-            {
-                Console.WriteLine($"Sentiment: {item.sentiment.SentimentText} | Prediction: {(Convert.ToBoolean(item.prediction.Prediction) ? "Toxic" : "Not Toxic")} | Probability: {item.prediction.Probability} ");
-            }
-            Console.WriteLine("=============== End of predictions ===============");
-
-        }
-
-        // Saves the model we trained to a zip file.
+        
 
         private static void SaveModelAsFile(MLContext mlContext, ITransformer model)
         {
-            // <Snippet24> 
             using (var fs = new FileStream( _modelPath, FileMode.Create, FileAccess.Write, FileShare.Write))
                 mlContext.Model.Save(model, fs);
-            // </Snippet24>
-
             Console.WriteLine("The model is saved to {0}", _modelPath);
         }
 
